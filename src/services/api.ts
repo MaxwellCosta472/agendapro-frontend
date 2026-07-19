@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios'
 import { ApiError } from '../types'
 
 export const api = axios.create({
-  baseURL: (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || 'http://localhost:3333/api',
+baseURL: 'https://agendapro-backend-wuh1.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 })
 

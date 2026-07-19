@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { Button, BottomNav } from '../../components/ui'
+import { BottomNav } from '../../components/ui'
 
 export function ClientDashboard() {
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   return (
     <div className="screen" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -13,7 +13,6 @@ export function ClientDashboard() {
         <h1 style={{ fontSize: 28, fontWeight: 700, marginTop: 2 }}>{user?.name?.split(' ')[0]} 👋</h1>
         <p style={{ fontSize: 13, opacity: 0.6, marginTop: 6 }}>O que você quer agendar hoje?</p>
       </div>
-
       <div style={{ flex: 1, padding: '24px 20px' }}>
         <div onClick={() => navigate('/cliente/agendar')} style={{ background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)', borderRadius: 24, padding: '24px 20px', color: 'white', cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -23,7 +22,6 @@ export function ClientDashboard() {
           </div>
           <span style={{ fontSize: 24, opacity: 0.8 }}>→</span>
         </div>
-
         <div onClick={() => navigate('/cliente/agendamentos')} style={{ background: 'white', border: '1.5px solid #e8e4f3', borderRadius: 24, padding: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 22, marginBottom: 6 }}>📅</div>
@@ -33,7 +31,6 @@ export function ClientDashboard() {
           <span style={{ fontSize: 20, color: '#7c5cbf' }}>→</span>
         </div>
       </div>
-
       <BottomNav active="home" role="client" onChange={tab => { if (tab === 'appointments') navigate('/cliente/agendamentos') }} />
     </div>
   )

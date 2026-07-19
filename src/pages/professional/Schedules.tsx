@@ -4,7 +4,6 @@ import { Button, Spinner, BottomNav, PageHeader } from '../../components/ui'
 import { schedulesApi } from '../../services/api'
 
 const DAYS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
-const DAYS_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 export function Schedules() {
   const navigate = useNavigate()
@@ -26,7 +25,7 @@ export function Schedules() {
   useEffect(() => { load() }, [])
 
   function getPeriodsForDay(dayOfWeek: number) {
-    return schedules.filter(s => s.day_of_week === dayOfWeek)
+    return schedules.filter((s: any) => s.day_of_week === dayOfWeek)
   }
 
   async function saveDay() {
@@ -38,14 +37,6 @@ export function Schedules() {
       load()
     } catch (e: any) { alert(e.response?.data?.message) }
     finally { setSaving(false) }
-  }
-
-  async function clearDay(dayOfWeek: number) {
-    if (!confirm(`Remover horários de ${DAYS[dayOfWeek]}?`)) return
-    try {
-      await fetch(`http://localhost:3333/api/schedules/day/${dayOfWeek}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('@agendamento:token')}` } })
-      load()
-    } catch {}
   }
 
   async function handleCloseDay() {
@@ -63,7 +54,6 @@ export function Schedules() {
   return (
     <div className="screen" style={{ minHeight: '100vh' }}>
       <PageHeader title="Configurar horários" subtitle="Defina quando você atende" onBack={() => navigate('/profissional')} />
-
       <div style={{ padding: '0 20px 100px' }}>
         {loading ? <Spinner /> : (
           <>
@@ -76,7 +66,7 @@ export function Schedules() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <p style={{ fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{DAYS[day]}</p>
-                      {dayPeriods.length > 0 ? dayPeriods.map((p, i) => (
+                      {dayPeriods.length > 0 ? dayPeriods.map((p: any, i: number) => (
                         <p key={i} style={{ fontSize: 12, color: '#7c5cbf', marginTop: 2 }}>{p.start_time.slice(0,5)} – {p.end_time.slice(0,5)}</p>
                       )) : <p style={{ fontSize: 12, color: '#a0a0b8', marginTop: 2 }}>Sem atendimento</p>}
                     </div>
@@ -101,7 +91,6 @@ export function Schedules() {
                 </div>
               )
             })}
-
             <h3 style={{ fontSize: 14, fontWeight: 600, color: '#6b6b8a', marginBottom: 12, marginTop: 24, textTransform: 'uppercase', letterSpacing: '.05em' }}>Fechar dia específico</h3>
             <div style={{ background: 'white', border: '1.5px solid #e8e4f3', borderRadius: 20, padding: '16px 18px', marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -110,8 +99,7 @@ export function Schedules() {
               </div>
               <input value={closeReason} onChange={e => setCloseReason(e.target.value)} placeholder="Motivo (opcional)" style={{ width: '100%', height: 40, borderRadius: 10, border: '1.5px solid #e8e4f3', padding: '0 12px', fontSize: 13 }} />
             </div>
-
-            {closedDays.length > 0 && closedDays.map(d => (
+            {closedDays.length > 0 && closedDays.map((d: any) => (
               <div key={d.id} style={{ background: '#ffebee', border: '1.5px solid #ffcdd2', borderRadius: 16, padding: '10px 16px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#c62828' }}>{new Date(d.date).toLocaleDateString('pt-BR')}</p>
@@ -123,7 +111,6 @@ export function Schedules() {
           </>
         )}
       </div>
-
       <BottomNav active="settings" role="professional" onChange={tab => { if (tab === 'calendar') navigate('/profissional'); if (tab === 'services') navigate('/profissional/servicos'); if (tab === 'clients') navigate('/profissional/clientes') }} />
     </div>
   )

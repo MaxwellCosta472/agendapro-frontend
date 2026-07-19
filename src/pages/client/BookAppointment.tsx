@@ -12,9 +12,6 @@ function addDays(date: Date, n: number) {
 function toYMD(d: Date) {
   return d.toISOString().split('T')[0]
 }
-function formatDate(d: Date) {
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
-}
 
 export function BookAppointment() {
   const navigate = useNavigate()
@@ -70,10 +67,11 @@ export function BookAppointment() {
 
   return (
     <div className="screen" style={{ minHeight: '100vh' }}>
-      <PageHeader title={step === 'service' ? 'Escolha o serviço' : step === 'datetime' ? 'Escolha o horário' : 'Confirmar'} onBack={() => step === 'service' ? navigate('/cliente') : step === 'datetime' ? setStep('service') : setStep('datetime')} />
-
+      <PageHeader
+        title={step === 'service' ? 'Escolha o serviço' : step === 'datetime' ? 'Escolha o horário' : 'Confirmar'}
+        onBack={() => step === 'service' ? navigate('/cliente') : step === 'datetime' ? setStep('service') : setStep('datetime')}
+      />
       <div style={{ padding: '0 20px 100px' }}>
-
         {step === 'service' && (
           <>
             <p style={{ fontSize: 14, color: '#6b6b8a', marginBottom: 20 }}>Selecione o serviço desejado</p>
@@ -110,7 +108,6 @@ export function BookAppointment() {
                 )
               })}
             </div>
-
             <p style={{ fontSize: 14, color: '#6b6b8a', marginBottom: 12 }}>Horários disponíveis</p>
             {loadingSlots ? <Spinner /> : slots.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0a0b8' }}>
@@ -126,7 +123,6 @@ export function BookAppointment() {
                 ))}
               </div>
             )}
-
             <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '16px 20px', background: 'white', borderTop: '1px solid #e8e4f3' }}>
               <Button fullWidth disabled={!selectedSlot} onClick={() => setStep('confirm')}>Continuar</Button>
             </div>

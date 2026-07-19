@@ -1,11 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAppointments } from '../../hooks/useAppointments'
 import { Button, Spinner, StatusBadge, PageHeader, BottomNav } from '../../components/ui'
-import { Appointment } from '../../types'
 
 export function MyAppointments() {
   const navigate = useNavigate()
-  const { appointments, loading, cancelAppointment, rescheduleAppointment } = useAppointments()
+  const { appointments, loading, cancelAppointment } = useAppointments()
 
   async function handleCancel(id: string) {
     if (!confirm('Cancelar este agendamento?')) return
@@ -15,7 +14,6 @@ export function MyAppointments() {
   return (
     <div className="screen" style={{ minHeight: '100vh' }}>
       <PageHeader title="Meus agendamentos" subtitle="Gerencie seus horários" onBack={() => navigate('/cliente')} />
-
       <div style={{ padding: '0 20px 100px' }}>
         {loading ? <Spinner /> : appointments.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -35,7 +33,6 @@ export function MyAppointments() {
               </div>
               <StatusBadge status={a.status} />
             </div>
-
             {a.status === 'scheduled' && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <Button variant="outline" style={{ flex: 1, height: 38, fontSize: 12 }} onClick={() => handleCancel(a.id)}>Cancelar</Button>
@@ -44,14 +41,12 @@ export function MyAppointments() {
                 )}
               </div>
             )}
-
             {a.reschedule_count > 0 && a.status === 'scheduled' && (
               <p style={{ fontSize: 11, color: '#a0a0b8', marginTop: 8 }}>Reagendado {a.reschedule_count}x de 2 permitidas</p>
             )}
           </div>
         ))}
       </div>
-
       <BottomNav active="appointments" role="client" onChange={tab => { if (tab === 'home') navigate('/cliente') }} />
     </div>
   )

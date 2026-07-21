@@ -39,6 +39,17 @@ export function Schedules() {
     finally { setSaving(false) }
   }
 
+  async function handleClearDay(day: number) {
+    if (!confirm(`Remover todos os horários de ${DAYS[day]}? O dia ficará sem atendimento.`)) return
+    setSaving(true)
+    try {
+      await schedulesApi.clearDay(day)
+      setEditDay(null)
+      load()
+    } catch (e: any) { alert(e.response?.data?.message) }
+    finally { setSaving(false) }
+  }
+
   async function handleCloseDay() {
     if (!closeDate) return
     try { await schedulesApi.closeDay(closeDate, closeReason); setCloseDate(''); setCloseReason(''); load() }
@@ -70,9 +81,16 @@ export function Schedules() {
                         <p key={i} style={{ fontSize: 12, color: '#7c5cbf', marginTop: 2 }}>{p.start_time.slice(0,5)} – {p.end_time.slice(0,5)}</p>
                       )) : <p style={{ fontSize: 12, color: '#a0a0b8', marginTop: 2 }}>Sem atendimento</p>}
                     </div>
-                    <button onClick={() => { setEditDay(isEditing ? null : day); setPeriods(dayPeriods.length > 0 ? dayPeriods.map((p: any) => ({ start_time: p.start_time.slice(0,5), end_time: p.end_time.slice(0,5) })) : [{ start_time: '09:00', end_time: '18:00' }]) }} style={{ background: '#f3f0ff', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#7c5cbf', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      {isEditing ? 'Cancelar' : 'Editar'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {dayPeriods.length > 0 && !isEditing && (
+                        <button onClick={() => handleClearDay(day)} disabled={saving} style={{ background: '#ffebee', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#c62828', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                          Fechar dia
+                        </button>
+                      )}
+                      <button onClick={() => { setEditDay(isEditing ? null : day); setPeriods(dayPeriods.length > 0 ? dayPeriods.map((p: any) => ({ start_time: p.start_time.slice(0,5), end_time: p.end_time.slice(0,5) })) : [{ start_time: '09:00', end_time: '18:00' }]) }} style={{ background: '#f3f0ff', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#7c5cbf', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        {isEditing ? 'Cancelar' : 'Editar'}
+                      </button>
+                    </div>
                   </div>
                   {isEditing && (
                     <div style={{ marginTop: 14, borderTop: '1px solid #e8e4f3', paddingTop: 14 }}>

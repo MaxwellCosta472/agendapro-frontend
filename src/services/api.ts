@@ -2,16 +2,20 @@ import axios, { AxiosError } from 'axios'
 import { ApiError } from '../types'
 
 export const api = axios.create({
-baseURL: 'https://agendapro-backend-wuh1.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3333/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Injeta o token JWT em todas as requisições automaticamente
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('@agendamento:token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 })
 
+// Trata erros globais de autenticação
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
@@ -24,19 +28,26 @@ api.interceptors.response.use(
   }
 )
 
+// ─── Helpers por módulo ───────────────────────────────────────────────────────
+
 export const authApi = {
   loginClient: (data: { email: string; password: string }) =>
     api.post('/auth/client/login', data),
   loginProfessional: (data: { email: string; password: string }) =>
     api.post('/auth/professional/login', data),
-  registerClient: (data: { name: string; email: string; phone: string; password: string; birth_date?: string }) =>
-    api.post('/auth/client/register', data),
+  registerClient: (data: {
+    name: string
+    email: string
+    phone: string
+    password: string
+    birth_date?: string
+  }) => api.post('/auth/client/register', data),
 }
 
 export const appointmentsApi = {
-  getAvailableSlots: (params: { date: string; service_id: string; professional_id: string }) =>
+  getAvailableSlots: (params: { date: string; service_id: string }) =>
     api.get('/appointments/available', { params }),
-  create: (data: { professional_id: string; service_id: string; date: string; start_time: string }) =>
+  create: (data: { service_id: string; date: string; start_time: string }) =>
     api.post('/appointments', data),
   myAppointments: () => api.get('/appointments/my'),
   cancel: (id: string) => api.patch(`/appointments/${id}/cancel`),
@@ -77,9 +88,9 @@ export const clientsApi = {
 
 export const professionalAppointmentsApi = {
   list: (params?: { date?: string; status?: string }) =>
-    api.get('/appointments', { params }),
+    api.get('/professional/appointments', { params }),
   reschedule: (id: string, data: { date: string; start_time: string }) =>
-    api.patch(`/appointments/${id}/professional-reschedule`, data),
+    api.patch(`/professional/appointments/${id}/reschedule`, data),
   cancel: (id: string) =>
-    api.patch(`/appointments/${id}/professional-cancel`),
+    api.patch(`/professional/appointments/${id}/cancel`),
 }

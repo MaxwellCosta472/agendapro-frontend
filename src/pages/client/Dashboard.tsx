@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { BottomNav } from '../../components/ui'
 import { appointmentsApi, servicesApi } from '../../services/api'
 
 const PROFESSIONAL_ID = 'a2fd0278-4bc3-abf2-e9af4bfe7179'
@@ -13,15 +12,21 @@ function greeting() {
   return 'BOA NOITE'
 }
 
+// Busca imagem do serviço salva localmente
+function getServiceImage(id: string): string | null {
+  try { return localStorage.getItem(`svc_img_${id}`) } catch { return null }
+}
+
 export function ClientDashboard() {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const [next, setNext] = useState<any>(null)
   const [services, setServices] = useState<any[]>([])
 
   useEffect(() => {
     appointmentsApi.list().then(r => {
-      const upcoming = (r.data || []).filter((a: any) => a.status === 'scheduled')
+      const upcoming = (r.data || [])
+        .filter((a: any) => a.status === 'scheduled')
         .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
       setNext(upcoming[0] || null)
     }).catch(() => {})
@@ -29,6 +34,13 @@ export function ClientDashboard() {
   }, [])
 
   const firstName = user?.name?.split(' ')[0] || 'Cliente'
+
+  const tabs = [
+    { icon: '🏠', label: 'Início', path: '/cliente' },
+    { icon: '📅', label: 'Agendar', path: '/cliente/agendar' },
+    { icon: '🗓️', label: 'Agenda', path: '/cliente/agendamentos' },
+    { icon: '👤', label: 'Perfil', path: '/cliente/perfil' },
+  ]
 
   return (
     <div className="screen" style={{ minHeight: '100vh', paddingBottom: 80 }}>
@@ -38,7 +50,7 @@ export function ClientDashboard() {
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#7B5A58', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>{firstName[0]?.toUpperCase()}</span>
           </div>
-          <button onClick={() => { navigate('/cliente/perfil') }} style={{
+          <button onClick={() => navigate('/cliente/perfil')} style={{
             background: '#D4BEB8', border: 'none', borderRadius: 20,
             padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#7B5A58', cursor: 'pointer',
           }}>Minha jornada</button>
@@ -50,10 +62,8 @@ export function ClientDashboard() {
       <div style={{ padding: '20px 20px 0' }}>
         {/* Próximo agendamento */}
         {next ? (
-          <div style={{
-            background: '#7B5A58', borderRadius: 20, padding: '20px 24px', marginBottom: 24,
-          }}>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Atendimentos</p>
+          <div style={{ background: '#7B5A58', borderRadius: 20, padding: '20px 24px', marginBottom: 24 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Próximo atendimento</p>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 12 }}>{next.service_name}</p>
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
@@ -91,21 +101,27 @@ export function ClientDashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {services.slice(0, 4).map(s => (
-            <div key={s.id} onClick={() => navigate('/cliente/agendar')} style={{ background: '#EAD9D1', borderRadius: 20, overflow: 'hidden', cursor: 'pointer' }}>
-              <div style={{ height: 90, background: '#D4BEB8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 10, color: '#9C7C78', textAlign: 'center', padding: '0 8px' }}>IMAGEM ILUSTRATIVA DO SERVIÇO</span>
-              </div>
-              <div style={{ padding: '10px 12px' }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#3D2424', marginBottom: 6 }}>{s.name}</p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#9C7C78' }}>{s.duration_minutes}h</span>
-                  <span style={{ color: '#D4BEB8' }}>|</span>
-                  <span style={{ fontSize: 11, color: '#9C7C78' }}>R${Number(s.price).toFixed(0)}</span>
+          {services.slice(0, 4).map(s => {
+            const img = getServiceImage(s.id)
+            return (
+              <div key={s.id} onClick={() => navigate('/cliente/agendar')} style={{ background: '#EAD9D1', borderRadius: 20, overflow: 'hidden', cursor: 'pointer' }}>
+                <div style={{ height: 100, background: img ? 'transparent' : '#D4BEB8', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {img
+                    ? <img src={img} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 10, color: '#9C7C78', textAlign: 'center', padding: '0 8px' }}>IMAGEM ILUSTRATIVA DO SERVIÇO</span>
+                  }
+                </div>
+                <div style={{ padding: '10px 12px' }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#3D2424', marginBottom: 6 }}>{s.name}</p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#9C7C78' }}>{s.duration_minutes}min</span>
+                    <span style={{ color: '#D4BEB8' }}>|</span>
+                    <span style={{ fontSize: 11, color: '#9C7C78' }}>R${Number(s.price).toFixed(0)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {services.length === 0 && (
@@ -115,36 +131,25 @@ export function ClientDashboard() {
         )}
       </div>
 
-      {/* Bottom bar de navegação */}
-      <div style={{
+      {/* Bottom nav */}
+      <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430, background: '#EAD9D1', borderTop: '1px solid #D4BEB8',
         display: 'flex', justifyContent: 'space-around', padding: '10px 0 18px', zIndex: 100,
       }}>
-        {[
-          { icon: '🏠', label: 'Início', path: '/cliente' },
-          { icon: '📅', label: 'Agendar', path: '/cliente/agendar' },
-          { icon: '🗓️', label: 'Agenda', path: '/cliente/agendamentos' },
-        ].map(tab => (
-          <button key={tab.path} onClick={() => navigate(tab.path)} style={{
+        {tabs.map(t => (
+          <button key={t.path} onClick={() => navigate(t.path)} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0 12px',
           }}>
-            <span style={{ fontSize: 20 }}>{tab.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: tab.path === '/cliente' ? 700 : 400, color: tab.path === '/cliente' ? '#7B5A58' : '#9C7C78' }}>
-              {tab.label}
+            <span style={{ fontSize: 20 }}>{t.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: t.path === '/cliente' ? 700 : 400, color: t.path === '/cliente' ? '#7B5A58' : '#9C7C78' }}>
+              {t.label}
             </span>
-            {tab.path === '/cliente' && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#7B5A58', marginTop: 1 }} />}
+            {t.path === '/cliente' && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#7B5A58', marginTop: 1 }} />}
           </button>
         ))}
-        <button onClick={logout} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-          background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
-        }}>
-          <span style={{ fontSize: 20 }}>🚪</span>
-          <span style={{ fontSize: 10, color: '#9C7C78' }}>Sair</span>
-        </button>
-      </div>
+      </nav>
     </div>
   )
 }

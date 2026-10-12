@@ -1,94 +1,130 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input } from '../../components/ui'
-import { useAuth } from '../../hooks/useAuth'
 import { authApi } from '../../services/api'
+import { useAuthStore } from '../../store/authStore'
+import { Button } from '../../components/ui'
+
+type Tab = 'client' | 'professional'
+type Mode = 'login' | 'register'
 
 export function Login() {
   const navigate = useNavigate()
-  const { loginClient, loginProfessional } = useAuth()
-  const [mode, setMode] = useState<'login' | 'register' | 'professional'>('login')
+  const { login } = useAuthStore()
+  const [tab, setTab] = useState<Tab>('client')
+  const [mode, setMode] = useState<Mode>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', birth_date: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', password: '' })
 
-  function update(field: string, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
-    setError('')
-  }
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
 
-  async function handleLogin() {
-    if (!form.email || !form.password) { setError('Preencha todos os campos.'); return }
-    setLoading(true)
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true); setError('')
     try {
-      await loginClient(form.email, form.password)
-      navigate('/cliente')
-    } catch (e: any) { setError(e.message) }
-    finally { setLoading(false) }
-  }
-
-  async function handleProfessionalLogin() {
-    if (!form.email || !form.password) { setError('Preencha todos os campos.'); return }
-    setLoading(true)
-    try {
-      await loginProfessional(form.email, form.password)
-      navigate('/profissional')
-    } catch (e: any) { setError(e.message) }
-    finally { setLoading(false) }
-  }
-
-  async function handleRegister() {
-    if (!form.name || !form.email || !form.phone || !form.password) {
-      setError('Preencha todos os campos obrigatórios.'); return
-    }
-    setLoading(true)
-    try {
-      await authApi.registerClient({ name: form.name, email: form.email, phone: form.phone, password: form.password, birth_date: form.birth_date || undefined })
-      await loginClient(form.email, form.password)
-      navigate('/cliente')
-    } catch (e: any) { setError(e.response?.data?.message ?? 'Erro ao criar conta.') }
-    finally { setLoading(false) }
+      if (tab === 'professional') {
+        const res = await authApi.professionalLogin({ email: form.email, password: form.password })
+        login(res.data.token, { ...res.data.professional, role: 'professional' })
+        navigate('/profissional')
+      } else if (mode === 'login') {
+        const res = await authApi.clientLogin({ email: form.email, password: form.password })
+        login(res.data.token, { ...res.data.client, role: 'client' })
+        navigate('/cliente')
+      } else {
+        await authApi.clientRegister({ name: form.name, phone: form.phone, email: form.email, password: form.password })
+        const res = await authApi.clientLogin({ email: form.email, password: form.password })
+        login(res.data.token, { ...res.data.client, role: 'client' })
+        navigate('/cliente')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao entrar. Verifique seus dados.')
+    } finally { setLoading(false) }
   }
 
   return (
-    <div className="screen" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <div style={{ background: 'linear-gradient(135deg, #2d1b69 0%, #7c5cbf 100%)', padding: '64px 32px 48px', borderRadius: '0 0 40px 40px', color: 'white', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>✂️</div>
-        <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -1 }}>AgendaPro</h1>
-        <p style={{ fontSize: 14, opacity: 0.7, marginTop: 6 }}>
-          {mode === 'login' && 'Entre na sua conta'}
-          {mode === 'register' && 'Crie sua conta'}
-          {mode === 'professional' && 'Acesso do profissional'}
-        </p>
+    <div className="screen" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header terroso */}
+      <div style={{
+        background: '#EAD9D1', padding: '64px 32px 48px',
+        borderRadius: '0 0 40px 40px',
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+      }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>✂️</div>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#3D2424', letterSpacing: '-0.5px' }}>AgendaPro</h1>
+        <p style={{ fontSize: 14, color: '#9C7C78', marginTop: 4 }}>Seu autocuidado, organizado.</p>
+
+        {/* Tabs Cliente / Profissional */}
+        <div style={{
+          display: 'flex', background: '#D4BEB8', borderRadius: 50,
+          padding: 4, marginTop: 28, width: '100%',
+        }}>
+          {(['client', 'professional'] as Tab[]).map(t => (
+            <button key={t} onClick={() => { setTab(t); setError('') }} style={{
+              flex: 1, padding: '10px 0', borderRadius: 50,
+              background: tab === t ? '#7B5A58' : 'transparent',
+              color: tab === t ? '#fff' : '#9C7C78',
+              fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}>
+              {t === 'client' ? 'Cliente' : 'Profissional'}
+            </button>
+          ))}
+        </div>
       </div>
-      <div style={{ flex: 1, padding: '32px 24px 24px' }}>
-        {mode !== 'professional' && (
-          <div style={{ display: 'flex', background: '#f8f6ff', borderRadius: 14, padding: 4, marginBottom: 28 }}>
-            {(['login', 'register'] as const).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError('') }} style={{ flex: 1, height: 40, borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, background: mode === m ? 'white' : 'transparent', color: mode === m ? '#7c5cbf' : '#a0a0b8', cursor: 'pointer', transition: 'all .15s', boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+
+      {/* Form */}
+      <div style={{ flex: 1, padding: '32px 24px 40px' }}>
+        {tab === 'client' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+            {(['login', 'register'] as Mode[]).map(m => (
+              <button key={m} onClick={() => { setMode(m); setError('') }} style={{
+                flex: 1, padding: '10px 0',
+                borderBottom: mode === m ? '2px solid #7B5A58' : '2px solid transparent',
+                background: 'none', border: 'none',
+                borderBottomWidth: 2, borderBottomStyle: 'solid',
+                borderBottomColor: mode === m ? '#7B5A58' : 'transparent',
+                color: mode === m ? '#7B5A58' : '#9C7C78',
+                fontWeight: mode === m ? 700 : 400, fontSize: 14, cursor: 'pointer',
+              }}>
                 {m === 'login' ? 'Entrar' : 'Cadastrar'}
               </button>
             ))}
           </div>
         )}
-        {mode === 'register' && <Input label="Nome completo" placeholder="Seu nome" value={form.name} onChange={e => update('name', e.target.value)} />}
-        <Input label="E-mail" type="email" placeholder="seu@email.com" value={form.email} onChange={e => update('email', e.target.value)} />
-        {mode === 'register' && <Input label="Telefone" type="tel" placeholder="11999999999" value={form.phone} onChange={e => update('phone', e.target.value)} />}
-        <Input label="Senha" type="password" placeholder="••••••" value={form.password} onChange={e => update('password', e.target.value)} />
-        {mode === 'register' && <Input label="Data de nascimento (opcional)" type="date" value={form.birth_date} onChange={e => update('birth_date', e.target.value)} />}
-        {error && <div style={{ background: '#ffebee', color: '#c62828', borderRadius: 12, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
-        <Button fullWidth disabled={loading} onClick={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleProfessionalLogin} style={{ marginBottom: 12 }}>
-          {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Entrar como profissional'}
-        </Button>
-        {mode !== 'professional' ? (
-          <button onClick={() => { setMode('professional'); setError('') }} style={{ width: '100%', background: 'none', border: 'none', color: '#7c5cbf', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '8px 0' }}>
-            É profissional? Acesse aqui
-          </button>
-        ) : (
-          <button onClick={() => { setMode('login'); setError('') }} style={{ width: '100%', background: 'none', border: 'none', color: '#7c5cbf', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '8px 0' }}>
-            ← Voltar para login de cliente
-          </button>
-        )}
+
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {tab === 'client' && mode === 'register' && (
+            <>
+              <div>
+                <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Nome completo</label>
+                <input type="text" placeholder="Seu nome" value={form.name} onChange={set('name')} required />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Telefone</label>
+                <input type="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={set('phone')} required />
+              </div>
+            </>
+          )}
+          <div>
+            <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>E-mail</label>
+            <input type="email" placeholder="seu@email.com" value={form.email} onChange={set('email')} required />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Senha</label>
+            <input type="password" placeholder="••••••" value={form.password} onChange={set('password')} required />
+          </div>
+
+          {error && (
+            <div style={{ background: '#ffebee', color: '#c62828', borderRadius: 12, padding: '10px 14px', fontSize: 13 }}>
+              {error}
+            </div>
+          )}
+
+          <Button type="submit" fullWidth disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'Entrando...' : tab === 'professional' ? 'Entrar como profissional' : mode === 'login' ? 'Entrar' : 'Criar conta'}
+          </Button>
+        </form>
       </div>
     </div>
   )

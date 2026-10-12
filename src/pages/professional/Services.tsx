@@ -1,96 +1,158 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Spinner, BottomNav, PageHeader } from '../../components/ui'
+import { Spinner, Button } from '../../components/ui'
 import { servicesApi } from '../../services/api'
-import { Service } from '../../types'
 
 export function Services() {
   const navigate = useNavigate()
-  const [services, setServices] = useState<Service[]>([])
+  const [services, setServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', duration_minutes: '', price: '' })
+  const [form, setForm] = useState({ name: '', duration_minutes: '', price: '', description: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
+
   function load() {
     setLoading(true)
-    servicesApi.list().then(r => setServices(r.data)).finally(() => setLoading(false))
+    servicesApi.listMine().then(r => setServices(r.data || [])).catch(() => {}).finally(() => setLoading(false))
   }
-
   useEffect(() => { load() }, [])
 
-  async function handleCreate() {
-    if (!form.name || !form.duration_minutes || !form.price) { setError('Preencha todos os campos.'); return }
-    setSaving(true)
+  async function createService(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true); setError('')
     try {
-      await servicesApi.create({ name: form.name, duration_minutes: Number(form.duration_minutes), price: Number(form.price) })
-      setForm({ name: '', duration_minutes: '', price: '' })
-      setShowForm(false)
-      load()
-    } catch (e: any) { setError(e.response?.data?.message ?? 'Erro ao criar serviço.') }
+      await servicesApi.create({ name: form.name, duration_minutes: Number(form.duration_minutes), price: Number(form.price), description: form.description })
+      setForm({ name: '', duration_minutes: '', price: '', description: '' })
+      setShowForm(false); load()
+    } catch (e: any) { setError(e.response?.data?.message || 'Erro ao criar serviço.') }
     finally { setSaving(false) }
   }
 
-  async function toggleStatus(s: Service) {
-    try {
-      await servicesApi.update(s.id, { status: s.status === 'active' ? 'inactive' : 'active' })
-      load()
-    } catch (e: any) { alert(e.response?.data?.message) }
+  async function toggle(id: string, active: boolean) {
+    try { await servicesApi.update(id, { is_active: !active }); load() } catch {}
+  }
+  async function remove(id: string) {
+    if (!confirm('Excluir este serviço?')) return
+    try { await servicesApi.remove(id); load() } catch {}
   }
 
-  async function handleDelete(s: Service) {
-    if (!confirm(`Excluir "${s.name}"?`)) return
-    try { await servicesApi.remove(s.id); load() }
-    catch (e: any) { alert(e.response?.data?.message) }
-  }
+  const tabs = [
+    { icon: '📋', label: 'Agenda', path: '/profissional' },
+    { icon: '✂️', label: 'Serviços', path: '/profissional/servicos' },
+    { icon: '👥', label: 'Clientes', path: '/profissional/clientes' },
+    { icon: '⚙️', label: 'Config', path: '/profissional/horarios' },
+  ]
 
   return (
-    <div className="screen" style={{ minHeight: '100vh' }}>
-      <PageHeader title="Serviços" subtitle={`${services.length}/10 serviços cadastrados`} onBack={() => navigate('/profissional')} rightAction={
-        <button onClick={() => { setShowForm(!showForm); setError('') }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, width: 36, height: 36, color: 'white', fontSize: 20, cursor: 'pointer' }}>+</button>
-      } />
+    <div className="screen" style={{ minHeight: '100vh', paddingBottom: 80 }}>
+      <div style={{ background: '#EAD9D1', padding: '52px 24px 24px' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#3D2424' }}>Gerenciar serviços</h1>
+        <p style={{ fontSize: 13, color: '#9C7C78', marginTop: 4 }}>{services.length}/10 serviços cadastrados</p>
+      </div>
 
-      <div style={{ padding: '0 20px 100px' }}>
-        {showForm && (
-          <div style={{ background: '#f3f0ff', borderRadius: 20, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#2d1b69', marginBottom: 16 }}>Novo serviço</h3>
-            <Input label="Nome" placeholder="Ex: Corte de cabelo" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-            <Input label="Duração (minutos)" type="number" placeholder="30" value={form.duration_minutes} onChange={e => setForm(p => ({ ...p, duration_minutes: e.target.value }))} />
-            <Input label="Preço (R$)" type="number" placeholder="50" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
-            {error && <p style={{ color: '#c62828', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="outline" style={{ flex: 1 }} onClick={() => setShowForm(false)}>Cancelar</Button>
-              <Button style={{ flex: 1 }} disabled={saving} onClick={handleCreate}>{saving ? 'Salvando...' : 'Salvar'}</Button>
-            </div>
-          </div>
+      <div style={{ padding: '20px 20px 0' }}>
+        {/* Botão novo serviço */}
+        {services.length < 10 && !showForm && (
+          <button onClick={() => setShowForm(true)} style={{
+            width: '100%', padding: '16px', borderRadius: 18,
+            border: '2px dashed #D4BEB8', background: 'transparent',
+            color: '#7B5A58', fontWeight: 600, fontSize: 15, cursor: 'pointer', marginBottom: 16,
+          }}>
+            + Novo serviço
+          </button>
         )}
 
-        {loading ? <Spinner /> : services.map(s => (
-          <div key={s.id} style={{ background: 'white', border: '1.5px solid #e8e4f3', borderRadius: 20, padding: '14px 18px', marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Form novo serviço */}
+        {showForm && (
+          <form onSubmit={createService} style={{ background: '#EAD9D1', borderRadius: 20, padding: 20, marginBottom: 16 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#3D2424', marginBottom: 16 }}>Novo serviço</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <p style={{ fontWeight: 600, fontSize: 14, color: s.status === 'inactive' ? '#a0a0b8' : '#1a1a2e' }}>{s.name}</p>
-                <p style={{ fontSize: 12, color: '#a0a0b8', marginTop: 2 }}>{s.duration_minutes} min • R$ {Number(s.price).toFixed(2)}</p>
+                <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Nome</label>
+                <input type="text" placeholder="Ex: Corte feminino" value={form.name} onChange={set('name')} required />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: s.status === 'active' ? '#e8f5e9' : '#f5f5f5', color: s.status === 'active' ? '#2e7d32' : '#a0a0b8', fontWeight: 600 }}>
-                  {s.status === 'active' ? 'Ativo' : 'Inativo'}
-                </span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Duração (min)</label>
+                  <input type="number" placeholder="60" value={form.duration_minutes} onChange={set('duration_minutes')} required min={1} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Preço (R$)</label>
+                  <input type="number" placeholder="150" value={form.price} onChange={set('price')} required min={0} step="0.01" />
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <button onClick={() => toggleStatus(s)} style={{ flex: 1, height: 32, borderRadius: 8, border: '1px solid #e8e4f3', background: 'white', fontSize: 12, color: '#6b6b8a', cursor: 'pointer' }}>
-                {s.status === 'active' ? 'Desativar' : 'Ativar'}
-              </button>
-              <button onClick={() => handleDelete(s)} style={{ flex: 1, height: 32, borderRadius: 8, border: '1px solid #ffcdd2', background: 'white', fontSize: 12, color: '#c62828', cursor: 'pointer' }}>
-                Excluir
-              </button>
+            {error && <div style={{ background: '#ffebee', color: '#c62828', borderRadius: 12, padding: '10px 14px', fontSize: 13, marginTop: 12 }}>{error}</div>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button type="button" onClick={() => { setShowForm(false); setError('') }} style={{
+                flex: 1, padding: '13px 0', borderRadius: 50, border: '1.5px solid #D4BEB8',
+                background: 'transparent', color: '#9C7C78', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+              }}>Cancelar</button>
+              <button type="submit" disabled={saving} style={{
+                flex: 1, padding: '13px 0', borderRadius: 50, border: 'none',
+                background: '#7B5A58', color: 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer', opacity: saving ? 0.6 : 1,
+              }}>{saving ? 'Salvando...' : 'Salvar'}</button>
             </div>
+          </form>
+        )}
+
+        {loading ? <Spinner /> : services.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#9C7C78' }}>
+            <p style={{ fontSize: 36, marginBottom: 12 }}>✂️</p>
+            <p>Nenhum serviço cadastrado ainda</p>
           </div>
-        ))}
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {services.map((s: any) => (
+              <div key={s.id} style={{ background: '#EAD9D1', borderRadius: 18, padding: '16px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#3D2424' }}>{s.name}</p>
+                    <p style={{ fontSize: 13, color: '#9C7C78', marginTop: 2 }}>{s.duration_minutes}min · R${Number(s.price).toFixed(2)}</p>
+                  </div>
+                  <span style={{
+                    background: s.is_active ? '#e8f5e9' : '#EAD9D1',
+                    color: s.is_active ? '#2e7d32' : '#9C7C78',
+                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                  }}>{s.is_active ? 'Ativo' : 'Inativo'}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button onClick={() => toggle(s.id, s.is_active)} style={{
+                    flex: 1, padding: '9px 0', borderRadius: 12, border: '1.5px solid #D4BEB8',
+                    background: 'transparent', color: '#7B5A58', fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                  }}>{s.is_active ? 'Desativar' : 'Ativar'}</button>
+                  <button onClick={() => remove(s.id)} style={{
+                    padding: '9px 16px', borderRadius: 12, border: '1.5px solid #D4BEB8',
+                    background: 'transparent', color: '#c62828', fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                  }}>Excluir</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <BottomNav active="services" role="professional" onChange={tab => { if (tab === 'calendar') navigate('/profissional'); if (tab === 'clients') navigate('/profissional/clientes'); if (tab === 'settings') navigate('/profissional/horarios') }} />
+
+      <nav style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 430, background: '#EAD9D1', borderTop: '1px solid #D4BEB8',
+        display: 'flex', justifyContent: 'space-around', padding: '10px 0 18px', zIndex: 100,
+      }}>
+        {tabs.map(tab => (
+          <button key={tab.path} onClick={() => navigate(tab.path)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0 12px',
+          }}>
+            <span style={{ fontSize: 20 }}>{tab.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: tab.path === '/profissional/servicos' ? 700 : 400, color: tab.path === '/profissional/servicos' ? '#7B5A58' : '#9C7C78' }}>
+              {tab.label}
+            </span>
+            {tab.path === '/profissional/servicos' && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#7B5A58', marginTop: 1 }} />}
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

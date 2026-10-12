@@ -1,37 +1,150 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/authStore'
 import { BottomNav } from '../../components/ui'
+import { appointmentsApi, servicesApi } from '../../services/api'
+
+const PROFESSIONAL_ID = 'a2fd0278-4bc3-abf2-e9af4bfe7179'
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'BOM DIA'
+  if (h < 18) return 'BOA TARDE'
+  return 'BOA NOITE'
+}
 
 export function ClientDashboard() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, logout } = useAuthStore()
+  const [next, setNext] = useState<any>(null)
+  const [services, setServices] = useState<any[]>([])
+
+  useEffect(() => {
+    appointmentsApi.list().then(r => {
+      const upcoming = (r.data || []).filter((a: any) => a.status === 'scheduled')
+        .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
+      setNext(upcoming[0] || null)
+    }).catch(() => {})
+    servicesApi.list(PROFESSIONAL_ID).then(r => setServices(r.data || [])).catch(() => {})
+  }, [])
+
+  const firstName = user?.name?.split(' ')[0] || 'Cliente'
 
   return (
-    <div className="screen" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <div style={{ background: 'linear-gradient(135deg, #2d1b69 0%, #7c5cbf 100%)', padding: '48px 24px 40px', borderRadius: '0 0 40px 40px', color: 'white' }}>
-        <p style={{ fontSize: 14, opacity: 0.7 }}>Olá,</p>
-        <h1 style={{ fontSize: 28, fontWeight: 700, marginTop: 2 }}>{user?.name?.split(' ')[0]} 👋</h1>
-        <p style={{ fontSize: 13, opacity: 0.6, marginTop: 6 }}>O que você quer agendar hoje?</p>
-      </div>
-      <div style={{ flex: 1, padding: '24px 20px' }}>
-        <div onClick={() => navigate('/cliente/agendar')} style={{ background: 'linear-gradient(135deg, #7c5cbf, #9b7fe8)', borderRadius: 24, padding: '24px 20px', color: 'white', cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>✂️</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Novo agendamento</h2>
-            <p style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>Escolha serviço e horário</p>
+    <div className="screen" style={{ minHeight: '100vh', paddingBottom: 80 }}>
+      {/* Header */}
+      <div style={{ background: '#EAD9D1', padding: '52px 24px 28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#7B5A58', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>{firstName[0]?.toUpperCase()}</span>
           </div>
-          <span style={{ fontSize: 24, opacity: 0.8 }}>→</span>
+          <button onClick={() => { navigate('/cliente/perfil') }} style={{
+            background: '#D4BEB8', border: 'none', borderRadius: 20,
+            padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#7B5A58', cursor: 'pointer',
+          }}>Minha jornada</button>
         </div>
-        <div onClick={() => navigate('/cliente/agendamentos')} style={{ background: 'white', border: '1.5px solid #e8e4f3', borderRadius: 24, padding: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>📅</div>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a2e' }}>Meus agendamentos</h2>
-            <p style={{ fontSize: 12, color: '#a0a0b8', marginTop: 4 }}>Ver e gerenciar horários</p>
-          </div>
-          <span style={{ fontSize: 20, color: '#7c5cbf' }}>→</span>
-        </div>
+        <p style={{ fontSize: 13, color: '#9C7C78', fontWeight: 600, letterSpacing: '.08em' }}>{greeting()}, {firstName.toUpperCase()}</p>
+        <p style={{ fontSize: 13, color: '#9C7C78', marginTop: 2 }}>Pronta para o próximo atendimento?</p>
       </div>
-      <BottomNav active="home" role="client" onChange={tab => { if (tab === 'appointments') navigate('/cliente/agendamentos') }} />
+
+      <div style={{ padding: '20px 20px 0' }}>
+        {/* Próximo agendamento */}
+        {next ? (
+          <div style={{
+            background: '#7B5A58', borderRadius: 20, padding: '20px 24px', marginBottom: 24,
+          }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Atendimentos</p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 12 }}>{next.service_name}</p>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Data</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>
+                  {new Date(next.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}, {next.start_time}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Profissional</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Maxwell</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div onClick={() => navigate('/cliente/agendar')} style={{
+            background: '#7B5A58', borderRadius: 20, padding: '20px 24px', marginBottom: 24, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>Atendimentos</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>Nenhum agendado</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Toque para agendar agora</p>
+            </div>
+            <span style={{ fontSize: 28 }}>✂️</span>
+          </div>
+        )}
+
+        {/* Serviços */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#3D2424', textTransform: 'uppercase', letterSpacing: '.05em' }}>Serviços</p>
+          <button onClick={() => navigate('/cliente/agendar')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#7B5A58', fontWeight: 600, cursor: 'pointer' }}>
+            Ver todos
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {services.slice(0, 4).map(s => (
+            <div key={s.id} onClick={() => navigate('/cliente/agendar')} style={{ background: '#EAD9D1', borderRadius: 20, overflow: 'hidden', cursor: 'pointer' }}>
+              <div style={{ height: 90, background: '#D4BEB8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 10, color: '#9C7C78', textAlign: 'center', padding: '0 8px' }}>IMAGEM ILUSTRATIVA DO SERVIÇO</span>
+              </div>
+              <div style={{ padding: '10px 12px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#3D2424', marginBottom: 6 }}>{s.name}</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#9C7C78' }}>{s.duration_minutes}h</span>
+                  <span style={{ color: '#D4BEB8' }}>|</span>
+                  <span style={{ fontSize: 11, color: '#9C7C78' }}>R${Number(s.price).toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {services.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: '#9C7C78' }}>
+            <p>Nenhum serviço disponível</p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom bar de navegação */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 430, background: '#EAD9D1', borderTop: '1px solid #D4BEB8',
+        display: 'flex', justifyContent: 'space-around', padding: '10px 0 18px', zIndex: 100,
+      }}>
+        {[
+          { icon: '🏠', label: 'Início', path: '/cliente' },
+          { icon: '📅', label: 'Agendar', path: '/cliente/agendar' },
+          { icon: '🗓️', label: 'Agenda', path: '/cliente/agendamentos' },
+        ].map(tab => (
+          <button key={tab.path} onClick={() => navigate(tab.path)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
+          }}>
+            <span style={{ fontSize: 20 }}>{tab.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: tab.path === '/cliente' ? 700 : 400, color: tab.path === '/cliente' ? '#7B5A58' : '#9C7C78' }}>
+              {tab.label}
+            </span>
+            {tab.path === '/cliente' && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#7B5A58', marginTop: 1 }} />}
+          </button>
+        ))}
+        <button onClick={logout} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
+        }}>
+          <span style={{ fontSize: 20 }}>🚪</span>
+          <span style={{ fontSize: 10, color: '#9C7C78' }}>Sair</span>
+        </button>
+      </div>
     </div>
   )
 }

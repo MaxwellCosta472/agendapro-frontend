@@ -5,23 +5,17 @@
 }
 
 :root {
-  --purple-50: #f3f0ff;
-  --purple-100: #e9e3ff;
-  --purple-200: #d4c9ff;
-  --purple-400: #9b7fe8;
-  --purple-500: #7c5cbf;
-  --purple-600: #6941a8;
-  --purple-700: #5a3491;
-  --purple-900: #2d1b69;
+  --bg: #F5EDE8;
+  --card: #EAD9D1;
+  --primary: #7B5A58;
+  --primary-dark: #5E3E3C;
+  --text: #3D2424;
+  --text-secondary: #9C7C78;
+  --border: #D4BEB8;
+  --input: #EDE5DF;
+  --white: #ffffff;
 
-  --bg: #f8f6ff;
-  --surface: #ffffff;
-  --text-primary: #1a1a2e;
-  --text-secondary: #6b6b8a;
-  --text-muted: #a0a0b8;
-  --border: #e8e4f3;
-
-  --radius-sm: 8px;
+  --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
@@ -35,7 +29,7 @@ html, body, #root {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
-  color: var(--text-primary);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -54,25 +48,40 @@ button {
   outline: none;
 }
 
-/* Layout padrão da tela (mobile-first, centralizado em desktop) */
 .screen {
   max-width: 430px;
   min-height: 100vh;
   margin: 0 auto;
-  background: var(--surface);
+  background: var(--bg);
   position: relative;
-  overflow-x: hidden;
 }
 
-/* Header com gradiente roxo */
-.header-gradient {
-  background: linear-gradient(135deg, var(--purple-900) 0%, var(--purple-500) 100%);
-  padding: 48px 24px 32px;
-  color: white;
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+textarea {
+  background: var(--input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 15px;
+  color: var(--text);
+  width: 100%;
+  transition: border-color 0.2s;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--purple-200); border-radius: 2px; }
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+input::placeholder {
+  color: var(--text-secondary);
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

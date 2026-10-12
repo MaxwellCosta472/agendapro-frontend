@@ -1,9 +1,26 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Spinner, Button } from '../../components/ui'
+import { Spinner } from '../../components/ui'
 import { schedulesApi } from '../../services/api'
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+
+// Retorna as datas da semana atual (dom→sáb)
+function getCurrentWeekDates(): Date[] {
+  const today = new Date()
+  const dow = today.getDay() // 0=dom
+  const sunday = new Date(today)
+  sunday.setDate(today.getDate() - dow)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sunday)
+    d.setDate(sunday.getDate() + i)
+    return d
+  })
+}
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+}
 
 export function Schedules() {
   const navigate = useNavigate()
@@ -18,6 +35,8 @@ export function Schedules() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const weekDates = getCurrentWeekDates()
+
   useEffect(() => {
     setLoading(true)
     Promise.all([
@@ -31,12 +50,23 @@ export function Schedules() {
     }).finally(() => setLoading(false))
   }, [])
 
+  // Verifica se uma data específica da semana está na lista de dias fechados
+  function isDateClosed(date: Date): { closed: boolean; closedId?: string } {
+    const iso = date.toISOString().split('T')[0]
+    const found = closed.find((c: any) => c.date === iso || c.date?.startsWith(iso))
+    return found ? { closed: true, closedId: found.id } : { closed: false }
+  }
+
   async function saveWeekly(item: any) {
-    try { await schedulesApi.updateWeekly(item.day_of_week, item); } catch {}
+    try { await schedulesApi.updateWeekly(item.day_of_week, item) } catch {}
   }
 
   function toggleDay(dayIdx: number, field: 'is_active' | 'start_time' | 'end_time', value: any) {
     const updated = weekly.map(d => d.day_of_week === dayIdx ? { ...d, [field]: value } : d)
+    // Se não existia, cria entrada
+    if (!updated.find(d => d.day_of_week === dayIdx)) {
+      updated.push({ day_of_week: dayIdx, is_active: false, start_time: '08:00', end_time: '18:00', [field]: value })
+    }
     setWeekly(updated)
     const day = updated.find(d => d.day_of_week === dayIdx)
     if (day) saveWeekly(day)
@@ -54,7 +84,15 @@ export function Schedules() {
   }
 
   async function removeClosedDay(id: string) {
-    try { await schedulesApi.removeClosedDay(id); const r = await schedulesApi.getClosedDays(); setClosed(r.data || []) } catch {}
+    try {
+      await schedulesApi.removeClosedDay(id)
+      setClosed(prev => prev.filter((c: any) => c.id !== id))
+    } catch {}
+  }
+
+  // Reabrir um dia fechado específico (remover da lista de dias fechados)
+  async function reopenDate(closedId: string) {
+    await removeClosedDay(closedId)
   }
 
   async function addBlocked(e: React.FormEvent) {
@@ -69,7 +107,10 @@ export function Schedules() {
   }
 
   async function removeBlocked(id: string) {
-    try { await schedulesApi.removeBlockedSlot(id); const r = await schedulesApi.getBlockedSlots(); setBlocked(r.data || []) } catch {}
+    try {
+      await schedulesApi.removeBlockedSlot(id)
+      setBlocked(prev => prev.filter((b: any) => b.id !== id))
+    } catch {}
   }
 
   const navTabs = [
@@ -102,21 +143,58 @@ export function Schedules() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {DAYS.map((dayName, i) => {
                   const day = weekly.find((d: any) => d.day_of_week === i) || { day_of_week: i, is_active: false, start_time: '08:00', end_time: '18:00' }
+                  const weekDate = weekDates[i]
+                  const { closed: dateClosed, closedId } = isDateClosed(weekDate)
+                  const isClosed = !day.is_active || dateClosed
+                  const isToday = weekDate.toDateString() === new Date().toDateString()
+
                   return (
-                    <div key={i} style={{ background: '#EAD9D1', borderRadius: 18, padding: '14px 18px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: day.is_active ? 12 : 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: day.is_active ? '#3D2424' : '#9C7C78' }}>{dayName}</p>
-                        <button onClick={() => toggleDay(i, 'is_active', !day.is_active)} style={{
-                          width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                          background: day.is_active ? '#7B5A58' : '#D4BEB8', position: 'relative', transition: 'background 0.2s',
-                        }}>
-                          <div style={{
-                            width: 18, height: 18, borderRadius: '50%', background: 'white',
-                            position: 'absolute', top: 3, left: day.is_active ? 23 : 3, transition: 'left 0.2s',
-                          }} />
-                        </button>
+                    <div key={i} style={{
+                      background: '#EAD9D1', borderRadius: 18, padding: '14px 18px',
+                      opacity: isClosed ? 0.6 : 1,
+                      border: isToday ? '2px solid #7B5A58' : '2px solid transparent',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isClosed ? 0 : (day.is_active ? 12 : 0) }}>
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: isClosed ? '#9C7C78' : '#3D2424' }}>
+                            {dayName}
+                            {isToday && <span style={{ fontSize: 10, background: '#7B5A58', color: 'white', borderRadius: 10, padding: '2px 7px', marginLeft: 8, fontWeight: 600 }}>HOJE</span>}
+                          </p>
+                          <p style={{ fontSize: 12, color: '#9C7C78', marginTop: 2 }}>{fmtDate(weekDate)}</p>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {/* Botão reabrir se fechado por data específica */}
+                          {dateClosed && closedId && (
+                            <button onClick={() => reopenDate(closedId)} style={{
+                              background: '#7B5A58', color: 'white', border: 'none',
+                              borderRadius: 20, padding: '5px 12px', fontSize: 11,
+                              fontWeight: 700, cursor: 'pointer',
+                            }}>Reabrir</button>
+                          )}
+
+                          {/* Toggle semanal */}
+                          <button onClick={() => toggleDay(i, 'is_active', !day.is_active)} style={{
+                            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                            background: day.is_active ? '#7B5A58' : '#D4BEB8', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                          }}>
+                            <div style={{
+                              width: 18, height: 18, borderRadius: '50%', background: 'white',
+                              position: 'absolute', top: 3, left: day.is_active ? 23 : 3, transition: 'left 0.2s',
+                            }} />
+                          </button>
+                        </div>
                       </div>
-                      {day.is_active && (
+
+                      {/* Estado fechado */}
+                      {isClosed && (
+                        <p style={{ fontSize: 12, color: '#9C7C78', fontWeight: 600, marginTop: 4 }}>
+                          Agenda fechada
+                        </p>
+                      )}
+
+                      {/* Horários quando ativo e não fechado por data */}
+                      {day.is_active && !dateClosed && (
                         <div style={{ display: 'flex', gap: 10 }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: 11, color: '#9C7C78', display: 'block', marginBottom: 4 }}>Início</label>
@@ -159,7 +237,7 @@ export function Schedules() {
                 ) : closed.map((c: any) => (
                   <div key={c.id} style={{ background: '#EAD9D1', borderRadius: 16, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: '#3D2424' }}>{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: '#3D2424' }}>{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
                       {c.reason && <p style={{ fontSize: 12, color: '#9C7C78', marginTop: 2 }}>{c.reason}</p>}
                     </div>
                     <button onClick={() => removeClosedDay(c.id)} style={{ background: 'none', border: 'none', color: '#c62828', fontSize: 18, cursor: 'pointer' }}>✕</button>
@@ -203,7 +281,7 @@ export function Schedules() {
                 ) : blocked.map((b: any) => (
                   <div key={b.id} style={{ background: '#EAD9D1', borderRadius: 16, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: '#3D2424' }}>{new Date(b.date + 'T12:00:00').toLocaleDateString('pt-BR')} · {b.start_time}–{b.end_time}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: '#3D2424' }}>{new Date(b.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} · {b.start_time}–{b.end_time}</p>
                       {b.reason && <p style={{ fontSize: 12, color: '#9C7C78', marginTop: 2 }}>{b.reason}</p>}
                     </div>
                     <button onClick={() => removeBlocked(b.id)} style={{ background: 'none', border: 'none', color: '#c62828', fontSize: 18, cursor: 'pointer' }}>✕</button>

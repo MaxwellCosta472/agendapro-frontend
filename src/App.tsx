@@ -5,6 +5,7 @@ import { ClientDashboard } from './pages/client/Dashboard'
 import { BookAppointment } from './pages/client/BookAppointment'
 import { MyAppointments } from './pages/client/MyAppointments'
 import { ClientProfile } from './pages/client/Profile'
+import { Landing } from './pages/Landing'
 import { ProfessionalDashboard } from './pages/professional/Dashboard'
 import { Services } from './pages/professional/Services'
 import { Clients } from './pages/professional/Clients'
@@ -29,7 +30,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/cliente" element={<RequireClient><ClientDashboard /></RequireClient>} />
         <Route path="/cliente/agendar" element={<RequireClient><BookAppointment /></RequireClient>} />
         <Route path="/cliente/agendamentos" element={<RequireClient><MyAppointments /></RequireClient>} />

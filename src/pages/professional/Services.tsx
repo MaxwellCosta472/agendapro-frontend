@@ -49,7 +49,7 @@ export function Services() {
     e.preventDefault()
     if (!form.name.trim()) { setError('Informe o nome do serviço.'); return }
     if (!form.duration_minutes || Number(form.duration_minutes) < 1) { setError('Informe a duração em minutos.'); return }
-    if (!form.price || Number(form.price) < 0) { setError('Informe o preço.'); return }
+    if (form.price === '' || Number(form.price) < 0) { setError('Informe o preço.'); return }
     setSaving(true); setError('')
     try {
       const res = await servicesApi.create({
@@ -58,16 +58,29 @@ export function Services() {
         price: Number(form.price),
         description: form.description || undefined,
       })
-      // Salvar imagem localmente vinculada ao ID do serviço
-      const newId = res.data?.id || res.data?.service?.id
+      // O serviço criado pode vir em res.data diretamente ou aninhado
+      const created = res.data?.service || res.data?.data || res.data
+      const newId = created?.id
       if (newId && imgPreview) saveServiceImage(newId, imgPreview)
+
+      // Adiciona direto ao estado sem depender do reload da API
+      if (created && newId) {
+        setServices(prev => [...prev, { ...created, is_active: created.is_active ?? true }])
+      } else {
+        // fallback: recarrega lista
+        load()
+      }
+
       setForm({ name: '', duration_minutes: '', price: '', description: '' })
       setImgPreview(null)
       if (fileRef.current) fileRef.current.value = ''
       setShowForm(false)
-      load()
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.response?.data?.error || `Erro ${err.response?.status || ''}: não foi possível criar o serviço.`
+      const status = err.response?.status
+      const body = err.response?.data
+      const msg = body?.message || body?.error || body?.detail
+        || (typeof body === 'string' ? body : null)
+        || `Erro ${status || 'de conexão'}: verifique sua conexão e tente novamente.`
       setError(msg)
     } finally { setSaving(false) }
   }

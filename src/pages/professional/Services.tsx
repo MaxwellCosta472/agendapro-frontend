@@ -29,7 +29,7 @@ export function Services() {
 
   function load() {
     setLoading(true)
-    servicesApi.listMine()
+    servicesApi.list()
       .then(r => setServices(r.data || []))
       .catch(() => {})
       .finally(() => setLoading(false))

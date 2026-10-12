@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
-import { Button } from '../../components/ui'
 
 type Tab = 'client' | 'professional'
 type Mode = 'login' | 'register'
@@ -38,29 +37,24 @@ export function Login() {
         navigate('/cliente')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao entrar. Verifique seus dados.')
+      setError(err.response?.data?.message || 'Verifique seus dados e tente novamente.')
     } finally { setLoading(false) }
   }
 
   return (
-    <div className="screen" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header terroso */}
-      <div style={{
-        background: '#EAD9D1', padding: '64px 32px 48px',
-        borderRadius: '0 0 40px 40px',
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>✂️</div>
-        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#3D2424', letterSpacing: '-0.5px' }}>AgendaPro</h1>
-        <p style={{ fontSize: 14, color: '#9C7C78', marginTop: 4 }}>Seu autocuidado, organizado.</p>
+    <div className="screen" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F5EDE8' }}>
+      {/* Header */}
+      <div style={{ padding: '64px 32px 36px' }}>
+        <h1 style={{ fontSize: 34, fontWeight: 800, color: '#3D2424', letterSpacing: '-0.5px', marginBottom: 4 }}>AgendaPro</h1>
+        <p style={{ fontSize: 14, color: '#9C7C78' }}>Seu autocuidado, organizado.</p>
 
         {/* Tabs Cliente / Profissional */}
         <div style={{
-          display: 'flex', background: '#D4BEB8', borderRadius: 50,
-          padding: 4, marginTop: 28, width: '100%',
+          display: 'flex', background: '#EAD9D1', borderRadius: 50,
+          padding: 4, marginTop: 28,
         }}>
           {(['client', 'professional'] as Tab[]).map(t => (
-            <button key={t} onClick={() => { setTab(t); setError('') }} style={{
+            <button key={t} onClick={() => { setTab(t); setError(''); setMode('login') }} style={{
               flex: 1, padding: '10px 0', borderRadius: 50,
               background: tab === t ? '#7B5A58' : 'transparent',
               color: tab === t ? '#fff' : '#9C7C78',
@@ -74,57 +68,62 @@ export function Login() {
       </div>
 
       {/* Form */}
-      <div style={{ flex: 1, padding: '32px 24px 40px' }}>
-        {tab === 'client' && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
-            {(['login', 'register'] as Mode[]).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError('') }} style={{
-                flex: 1, padding: '10px 0',
-                borderBottom: mode === m ? '2px solid #7B5A58' : '2px solid transparent',
-                background: 'none', border: 'none',
-                borderBottomWidth: 2, borderBottomStyle: 'solid',
-                borderBottomColor: mode === m ? '#7B5A58' : 'transparent',
-                color: mode === m ? '#7B5A58' : '#9C7C78',
-                fontWeight: mode === m ? 700 : 400, fontSize: 14, cursor: 'pointer',
-              }}>
-                {m === 'login' ? 'Entrar' : 'Cadastrar'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, padding: '0 24px 40px' }}>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {tab === 'client' && mode === 'register' && (
             <>
               <div>
-                <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Nome completo</label>
+                <label style={{ fontSize: 11, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.08em', display: 'block', marginBottom: 8, fontWeight: 600 }}>Nome completo</label>
                 <input type="text" placeholder="Seu nome" value={form.name} onChange={set('name')} required />
               </div>
               <div>
-                <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Telefone</label>
+                <label style={{ fontSize: 11, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.08em', display: 'block', marginBottom: 8, fontWeight: 600 }}>Telefone</label>
                 <input type="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={set('phone')} required />
               </div>
             </>
           )}
           <div>
-            <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>E-mail</label>
-            <input type="email" placeholder="seu@email.com" value={form.email} onChange={set('email')} required />
+            <label style={{ fontSize: 11, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.08em', display: 'block', marginBottom: 8, fontWeight: 600 }}>E-mail</label>
+            <input type="email" placeholder="Digite seu e-mail" value={form.email} onChange={set('email')} required />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 6 }}>Senha</label>
+            <label style={{ fontSize: 11, color: '#9C7C78', textTransform: 'uppercase', letterSpacing: '.08em', display: 'block', marginBottom: 8, fontWeight: 600 }}>Senha</label>
             <input type="password" placeholder="••••••" value={form.password} onChange={set('password')} required />
           </div>
 
           {error && (
-            <div style={{ background: '#ffebee', color: '#c62828', borderRadius: 12, padding: '10px 14px', fontSize: 13 }}>
+            <div style={{ background: '#ffebee', color: '#c62828', borderRadius: 12, padding: '12px 16px', fontSize: 13 }}>
               {error}
             </div>
           )}
 
-          <Button type="submit" fullWidth disabled={loading} style={{ marginTop: 8 }}>
-            {loading ? 'Entrando...' : tab === 'professional' ? 'Entrar como profissional' : mode === 'login' ? 'Entrar' : 'Criar conta'}
-          </Button>
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '16px 0', borderRadius: 50, border: 'none',
+            background: '#7B5A58', color: 'white', fontWeight: 700, fontSize: 15,
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+            marginTop: 4, letterSpacing: '.04em',
+          }}>
+            {loading ? 'Entrando...' : tab === 'professional' ? 'ENTRAR COMO PROFISSIONAL' : mode === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
+          </button>
         </form>
+
+        {tab === 'client' && (
+          <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#9C7C78' }}>
+            {mode === 'login' ? (
+              <>Novo por aqui?{' '}
+                <span onClick={() => { setMode('register'); setError('') }} style={{ color: '#7B5A58', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+                  Criar uma conta
+                </span>
+              </>
+            ) : (
+              <>Já tem conta?{' '}
+                <span onClick={() => { setMode('login'); setError('') }} style={{ color: '#7B5A58', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+                  Entrar
+                </span>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   )

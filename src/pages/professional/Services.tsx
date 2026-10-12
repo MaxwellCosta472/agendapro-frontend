@@ -86,16 +86,25 @@ export function Services() {
   }
 
   async function toggle(id: string, active: boolean) {
-    try { await servicesApi.update(id, { is_active: !active }); load() } catch {}
+    // Atualiza visualmente na hora
+    setServices(prev => prev.map(s => s.id === id ? { ...s, is_active: !active } : s))
+    try {
+      await servicesApi.update(id, { is_active: !active })
+    } catch {
+      // Se falhou, reverte
+      setServices(prev => prev.map(s => s.id === id ? { ...s, is_active: active } : s))
+    }
   }
 
   async function remove(id: string) {
     if (!window.confirm('Excluir este serviço?')) return
+    setServices(prev => prev.filter(s => s.id !== id))
     try {
       await servicesApi.remove(id)
       removeServiceImage(id)
-      load()
-    } catch {}
+    } catch {
+      load() // se falhou, recarrega estado real
+    }
   }
 
   const tabs = [
